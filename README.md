@@ -177,13 +177,13 @@ Owners and admins can also export the core business records at any time from **S
 
 **Docker:** `docker build -t lumera . && docker run -p 8787:8787 --env-file .env lumera`
 
-**Render:** push the repository and create a *Blueprint* from `render.yaml`. It sets up the web service, PostgreSQL, a generated auth secret and the health check. Then set `APP_URL`, `ADMIN_SIGNUP_CODE`, `MAIL_FROM`, `RESEND_API_KEY` and `ANTHROPIC_API_KEY` in the dashboard.
+**Render:** push the repository and create a *Blueprint* from `render.yaml`. It sets up the web service, PostgreSQL, a generated auth secret and the health check. When asked, enter your own `ADMIN_SIGNUP_CODE` (required). `ANTHROPIC_API_KEY`, `MAIL_FROM` and `RESEND_API_KEY` are optional and can be added later. The app uses its `onrender.com` address automatically; set `APP_URL` only if you add a custom domain.
 
 Production checklist:
 
 - [ ] `DATABASE_URL`, with backups/PITR enabled at the provider
 - [ ] `BETTER_AUTH_SECRET` (at least 32 characters, stored in your secret manager)
-- [ ] `APP_URL` set to the public `https://` URL. HTTPS enables secure cookies and HSTS.
+- [ ] `APP_URL` set to the public `https://` URL. HTTPS enables secure cookies and HSTS. On Render this defaults to the service's own address.
 - [ ] `TRUST_PROXY=1` behind a proxy or load balancer, so rate limits see real client IPs
 - [ ] An email provider and `MAIL_FROM`. Without one the app still runs, but password-reset and invitation emails can't be sent.
 - [ ] `ANTHROPIC_API_KEY`, plus Lume limits suited to your budget

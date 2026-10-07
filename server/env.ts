@@ -10,7 +10,9 @@ mkdirSync(DATA_DIR, { recursive: true });
 
 export const isProd = process.env.NODE_ENV === 'production';
 export const PORT = Number(process.env.PORT ?? 8787);
-export const APP_URL = (process.env.APP_URL ?? (isProd ? `http://localhost:${PORT}` : 'http://localhost:5173')).replace(/\/$/, '');
+// The public address. On Render it defaults to the service's own onrender.com URL;
+// set APP_URL only for a custom domain.
+export const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || (isProd ? `http://localhost:${PORT}` : 'http://localhost:5173')).replace(/\/$/, '');
 export const APP_ORIGIN = new URL(APP_URL).origin;
 export const COOKIE_SECURE = APP_URL.startsWith('https://');
 export const TRUST_PROXY = process.env.TRUST_PROXY === '1';

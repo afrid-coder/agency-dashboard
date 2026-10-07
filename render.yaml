@@ -1,5 +1,7 @@
 # Render Blueprint: one web service (Docker) + managed PostgreSQL.
-# After the first deploy, set the "sync: false" values in the dashboard.
+# Render asks for the "sync: false" values when the Blueprint is created;
+# only ADMIN_SIGNUP_CODE is required. The app uses its onrender.com address
+# automatically; add APP_URL later if you connect a custom domain.
 # Render's paid Postgres plans include daily backups and point-in-time
 # recovery — see README → Backups and recovery.
 services:
@@ -22,8 +24,6 @@ services:
         generateValue: true
       - key: TRUST_PROXY
         value: "1"
-      - key: APP_URL
-        sync: false # e.g. https://workspace.lumeracreative.com
       - key: MAIL_FROM
         sync: false
       - key: RESEND_API_KEY
