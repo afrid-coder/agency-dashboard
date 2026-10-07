@@ -1,0 +1,42 @@
+# Render Blueprint: one web service (Docker) + managed PostgreSQL.
+# After the first deploy, set the "sync: false" values in the dashboard.
+# Render's paid Postgres plans include daily backups and point-in-time
+# recovery — see README → Backups and recovery.
+services:
+  - type: web
+    name: lumera-creative
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lumera-db
+          property: connectionString
+      # Render's internal network connection string does not use TLS.
+      - key: DATABASE_SSL
+        value: disable
+      - key: BETTER_AUTH_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: APP_URL
+        sync: false # e.g. https://workspace.lumeracreative.com
+      - key: MAIL_FROM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: LUME_MODEL
+        value: claude-opus-5
+      - key: ADMIN_SIGNUP_CODE
+        sync: false # four digits the business owners use to sign up as admins
+
+databases:
+  - name: lumera-db
+    databaseName: lumera
+    user: lumera
+    plan: basic-256mb
