@@ -32,7 +32,7 @@ This creates a separate workspace named **“Lumera Creative (Demo)”**. It is 
 
 ### Create the real workspace (the two business owners)
 
-1. Open **/signup**, enter your name, email and a password, switch on **Admin** and enter the **admin code**. The default is `7391`; set `ADMIN_SIGNUP_CODE` to choose your own. The server prints the code at startup in development.
+1. Open **/signup**, enter your name, email and a password, switch on **Admin** and enter the **admin code**. In development the built-in code is `7391`, and the server prints it at startup. **Production requires your own code in `ADMIN_SIGNUP_CODE`**: the built-in one is public in this repository, so the server won't start with it.
 2. You're signed in straight away. The first person to use the code creates *Lumera Creative* and becomes its **Owner**.
 3. Your business partner does the same with the same code and joins the same workspace as an **Admin**. You get a notification when they join. To give them equal control, make them an Owner in **Settings → Members**.
 4. Invite the rest of the team from **Settings → Members**.
@@ -187,7 +187,7 @@ Production checklist:
 - [ ] `TRUST_PROXY=1` behind a proxy or load balancer, so rate limits see real client IPs
 - [ ] An email provider and `MAIL_FROM`. Without one the app still runs, but password-reset and invitation emails can't be sent.
 - [ ] `ANTHROPIC_API_KEY`, plus Lume limits suited to your budget
-- [ ] Your own four-digit `ADMIN_SIGNUP_CODE` (not the built-in default), shared only between the owners
+- [ ] Your own four-digit `ADMIN_SIGNUP_CODE`, shared only between the owners. Production won't start without one, because the built-in development code is public.
 
 **Scaling note:** run **one instance**. Live updates (Server-Sent Events) and the app-level rate limiter are in-process. Running more instances would need a shared channel, such as Postgres `LISTEN/NOTIFY`. Auth rate limits are already database-backed.
 

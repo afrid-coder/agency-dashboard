@@ -119,7 +119,7 @@ const server = serve({ fetch: app.fetch, port: PORT }, () => {
       `  Lumera Creative  → http://localhost:${PORT}${isProd ? '' : `   (app: ${APP_URL})`}`,
       `  Database         → ${dbKind === 'postgres' ? 'PostgreSQL (DATABASE_URL)' : 'embedded PostgreSQL in data/pg (development)'}`,
       `  Email            → ${mailMode === 'dev' ? 'development outbox at /dev/outbox' : mailMode}`,
-      `  Admin sign-up    → ${isProd ? (process.env.ADMIN_SIGNUP_CODE ? 'code from ADMIN_SIGNUP_CODE' : 'built-in default code — set ADMIN_SIGNUP_CODE') : `code ${ADMIN_SIGNUP_CODE}`}`,
+      `  Admin sign-up    → ${isProd ? 'code from ADMIN_SIGNUP_CODE' : `code ${ADMIN_SIGNUP_CODE}`}`,
       `  Lume             → ${lumeConfig.mode === 'live' ? `Claude · ${lumeConfig.model} · effort ${lumeConfig.effort}` : lumeConfig.mode === 'demo' ? 'DEMO MODE (no ANTHROPIC_API_KEY) — scripted answers, labelled in the app' : 'not configured — set ANTHROPIC_API_KEY'}`,
       mailWarning ? `  ⚠ ${mailWarning}` : null,
       '',

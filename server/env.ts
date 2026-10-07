@@ -83,9 +83,13 @@ export const lumeConfig = {
 // Four digits the business owners share privately. Signing up with the
 // "Admin" switch and this code joins the company workspace as an admin (the
 // very first person creates the workspace and becomes its owner). Everyone
-// else needs an invitation. Change it with ADMIN_SIGNUP_CODE.
-export const ADMIN_SIGNUP_CODE = process.env.ADMIN_SIGNUP_CODE ?? '7391';
+// else needs an invitation. The built-in code is for local development: it
+// is published with the source, so a live site must set its own.
+const BUILT_IN_ADMIN_CODE = '7391';
+export const ADMIN_SIGNUP_CODE = process.env.ADMIN_SIGNUP_CODE ?? BUILT_IN_ADMIN_CODE;
 if (!/^\d{4}$/.test(ADMIN_SIGNUP_CODE)) problems.push('ADMIN_SIGNUP_CODE must be exactly four digits.');
+else if (isProd && ADMIN_SIGNUP_CODE === BUILT_IN_ADMIN_CODE)
+  problems.push('Set ADMIN_SIGNUP_CODE to your own four digits. The built-in code is public in the source and only works in development.');
 
 if (problems.length) {
   console.error('\nLumera Creative cannot start:\n' + problems.map((p) => `  • ${p}`).join('\n') + '\n\nSee .env.example and README.md.\n');
