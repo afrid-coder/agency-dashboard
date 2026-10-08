@@ -16,9 +16,8 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173**. The API runs on port 8787; Vite proxies `/api` to it.
+Site live at : https://afrid-coder.github.io/agency-dashboard/
 
-With no email provider configured, emails (password reset, invitations) are captured at **http://localhost:5173/dev/outbox**.
 
 ### Try it with sample data
 
@@ -32,12 +31,6 @@ This creates a separate workspace named **“Lumera Creative (Demo)”**. It is 
 
 ### Create the real workspace (the two business owners)
 
-1. Open **/signup**, enter your name, email and a password, switch on **Admin** and enter the **admin code**. In development the built-in code is `7391`, and the server prints it at startup. **Production requires your own code in `ADMIN_SIGNUP_CODE`**: the built-in one is public in this repository, so the server won't start with it.
-2. You're signed in straight away. The first person to use the code creates *Lumera Creative* and becomes its **Owner**.
-3. Your business partner does the same with the same code and joins the same workspace as an **Admin**. You get a notification when they join. To give them equal control, make them an Owner in **Settings → Members**.
-4. Invite the rest of the team from **Settings → Members**.
-
-Anyone who signed up without the switch can enter the admin code later on the “Access pending” screen.
 
 ---
 
