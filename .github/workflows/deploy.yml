@@ -1,0 +1,106 @@
+# Every push to main: test, then publish the web app to GitHub Pages and the
+# API to Supabase (Edge Function "api").
+#
+# One-time setup (see README → Deploying → GitHub Pages + Supabase):
+#   - Settings → Pages → Source: GitHub Actions
+#   - Settings → Secrets and variables → Actions → SUPABASE_ACCESS_TOKEN
+#   - Supabase → Edge Functions → Secrets → ADMIN_SIGNUP_CODE (your four digits)
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+env:
+  # Public values: the publishable key is meant to ship in web apps.
+  SUPABASE_PROJECT_REF: mzevguvetpxnzebmzaig
+  SUPABASE_URL: https://mzevguvetpxnzebmzaig.supabase.co
+  SUPABASE_PUBLISHABLE_KEY: sb_publishable_c44J6T1uI6iJ1CoroBJpCA_uYUn4yti
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/embed-migrations.mjs --check
+      - run: npm run typecheck
+      - run: npm run test:e2e
+
+  api:
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+    steps:
+      - name: Needs a Supabase access token
+        if: env.SUPABASE_ACCESS_TOKEN == ''
+        run: |
+          echo "::error::Add the SUPABASE_ACCESS_TOKEN secret (Settings → Secrets and variables → Actions) to deploy the API."
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Configure function secrets
+        run: |
+          secrets=$(supabase secrets list --project-ref "$SUPABASE_PROJECT_REF")
+          if ! grep -q ADMIN_SIGNUP_CODE <<<"$secrets"; then
+            echo "::error::Set ADMIN_SIGNUP_CODE (your own four digits) in Supabase → Edge Functions → Secrets, then re-run this workflow."
+            exit 1
+          fi
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" \
+            "APP_URL=https://${owner}.github.io/${{ github.event.repository.name }}" \
+            "REALTIME_API_KEY=$SUPABASE_PUBLISHABLE_KEY"
+          # Generated once and kept: changing it would sign everyone out.
+          if ! grep -q BETTER_AUTH_SECRET <<<"$secrets"; then
+            supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" "BETTER_AUTH_SECRET=$(openssl rand -base64 48 | tr -d '\n')"
+          fi
+      - name: Deploy the API
+        run: |
+          node scripts/prepare-edge.mjs
+          supabase functions deploy api --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt
+
+  web:
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build for GitHub Pages
+        run: npx vite build
+        env:
+          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_API_BASE: ${{ env.SUPABASE_URL }}/functions/v1
+          VITE_SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ env.SUPABASE_PUBLISHABLE_KEY }}
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

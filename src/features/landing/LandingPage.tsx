@@ -17,6 +17,7 @@ import 'lenis/dist/lenis.css';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { gsap, reducedMotion } from '../../lib/motion.ts';
 import { Icon, LumeMark, type IconName } from '../../lib/icons.tsx';
+import { api } from '../../lib/api.ts';
 import { LumeraLogo } from '../../components/LumeraLogo.tsx';
 import type { Me } from '../../../shared/types.ts';
 import '../../styles/landing.css';
@@ -103,11 +104,7 @@ export default function LandingPage() {
   const trace = useRef<HTMLDivElement>(null);
   const me = useQuery({
     queryKey: ['landing-me'],
-    queryFn: async () => {
-      const r = await fetch('/api/me', { credentials: 'same-origin' });
-      if (!r.ok) return null;
-      return (await r.json()) as Me;
-    },
+    queryFn: () => api.get<Me>('/me').catch(() => null),
     retry: false,
     staleTime: 60_000,
   });

@@ -5,7 +5,8 @@ import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '../db/client.ts';
 import { ApiError, readJson } from '../http.ts';
-import { lumeConfig } from '../env.ts';
+import { IS_EDGE, lumeConfig } from '../env.ts';
+import { runRemindersIfDue } from '../services/reminders.ts';
 import { loadProfile, requireUser, resolveMembership, sessionIsLocked, type AppEnv } from '../auth/context.ts';
 import { auth } from '../auth/auth.ts';
 import { hashPin, verifyPin, MAX_PIN_ATTEMPTS } from '../auth/pin.ts';
@@ -36,6 +37,7 @@ async function preferences(userId: string): Promise<NotificationPreferences> {
 }
 
 account.get('/me', async (c) => {
+  if (IS_EDGE) runRemindersIfDue();
   const user = c.get('user');
   const profile = await loadProfile(user.id);
   const [m, prefs, invites, locked, [avatar]] = await Promise.all([
@@ -109,15 +111,6 @@ account.put('/me/avatar', async (c) => {
 account.delete('/me/avatar', async (c) => {
   await db.delete(schema.avatars).where(eq(schema.avatars.userId, c.get('user').id));
   return c.json({ ok: true });
-});
-
-account.get('/avatars/:userId', async (c) => {
-  const [row] = await db.select().from(schema.avatars).where(eq(schema.avatars.userId, c.req.param('userId')));
-  if (!row) throw new ApiError(404, 'not_found', 'No photo.');
-  c.header('Cache-Control', 'private, max-age=86400');
-  c.header('Content-Type', row.mime);
-  c.header('X-Content-Type-Options', 'nosniff');
-  return c.body(Buffer.from(row.data, 'base64'));
 });
 
 account.put('/me/preferences', async (c) => {
@@ -207,7 +200,7 @@ account.post('/me/active-workspace', async (c) => {
 account.post('/me/admin-access', async (c) => {
   const user = c.get('user');
   const input = await readJson(c, adminAccessSchema);
-  checkAdminCode(input.code, clientIp(c));
+  await checkAdminCode(input.code, clientIp(c));
   const profile = c.get('profile');
   const timezone = input.timezone ?? profile.timezone;
   if (!profile.onboardedAt) await db.update(schema.profiles).set({ timezone, onboardedAt: new Date() }).where(eq(schema.profiles.userId, user.id));

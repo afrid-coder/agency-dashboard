@@ -6,7 +6,7 @@ import { PasswordField } from './PasswordField.tsx';
 import { safeNext } from './SignInPage.tsx';
 import { Button, Field, Notice, Switch, describedBy } from '../../components/ui.tsx';
 import { PinInput } from '../../components/PinInput.tsx';
-import { authClient, authError } from '../../lib/auth.ts';
+import { authClient, authError, unreachable } from '../../lib/auth.ts';
 import { detectTimeZone } from '../../lib/format.ts';
 import { adminCodeSchema, emailSchema, nameSchema, passwordProblem } from '../../../shared/schemas.ts';
 
@@ -40,7 +40,7 @@ export function SignUpPage() {
     if (Object.keys(errs).length) return;
     setBusy(true);
     const extra = { timezone: detectTimeZone(), ...(admin ? { admin: true, adminCode } : {}) };
-    const { error } = await authClient.signUp.email({ name: n.data!, email: em.data!, password, ...extra } as Parameters<typeof authClient.signUp.email>[0]);
+    const { error } = await authClient.signUp.email({ name: n.data!, email: em.data!, password, ...extra } as Parameters<typeof authClient.signUp.email>[0]).catch(unreachable);
     setBusy(false);
     if (error) {
       if (error.code === 'BAD_ADMIN_CODE') {

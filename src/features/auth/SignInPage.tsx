@@ -4,8 +4,10 @@ import { useQueryClient } from '@tanstack/react-query';
 import { AuthLayout } from './AuthLayout.tsx';
 import { PasswordField } from './PasswordField.tsx';
 import { Button, Field, Notice } from '../../components/ui.tsx';
-import { authClient, authError } from '../../lib/auth.ts';
+import { authClient, authError, unreachable } from '../../lib/auth.ts';
 import { keys } from '../../lib/queries.ts';
+import { api } from '../../lib/api.ts';
+import type { Me } from '../../../shared/types.ts';
 
 export const safeNext = (next: string | null, fallback = '/app') => (next && next.startsWith('/') && !next.startsWith('//') ? next : fallback);
 
@@ -24,11 +26,11 @@ export function SignInPage() {
     setError(null);
     if (!email.trim() || !password) return setError('Enter your email and password.');
     setBusy(true);
-    const { error: err } = await authClient.signIn.email({ email: email.trim(), password });
+    const { error: err } = await authClient.signIn.email({ email: email.trim(), password }).catch(unreachable);
     setBusy(false);
     if (err) return setError(authError(err));
     qc.clear();
-    await qc.prefetchQuery({ queryKey: keys.me, queryFn: () => fetch('/api/me').then((r) => r.json()) }).catch(() => {});
+    await qc.prefetchQuery({ queryKey: keys.me, queryFn: () => api.get<Me>('/me') }).catch(() => {});
     navigate(next, { replace: true });
   };
 

@@ -2,8 +2,9 @@
 // is signed straight in, but company data needs a membership: the business
 // owners join with the private admin code, and everyone else accepts an
 // invitation sent to their email.
+import { Buffer } from 'node:buffer';
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { and, asc, count, eq, gt, inArray, isNull, ne } from 'drizzle-orm';
+import { and, asc, count, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import { db, isUniqueViolation, schema } from '../db/client.ts';
 import { ApiError, forbidden, notFound } from '../http.ts';
 import { logActivity } from './activity.ts';
@@ -60,35 +61,46 @@ export async function createWorkspace(userId: string, input: { name: string; tim
 
 // Wrong codes are counted per address and overall, so the four digits can't be
 // guessed by trying them all: 5 per address per 15 minutes, 12 overall per hour.
-const failures = new Map<string, { start: number; count: number }>();
+// The counts live in the database so they hold across server instances.
 const LIMITS = [
-  { key: (ip: string) => `ip:${ip}`, max: 5, windowMs: 15 * 60_000 },
-  { key: () => 'all', max: 12, windowMs: 60 * 60_000 },
+  { key: (ip: string) => `admin-code:ip:${ip}`, max: 5, windowMs: 15 * 60_000 },
+  { key: () => 'admin-code:all', max: 12, windowMs: 60 * 60_000 },
 ];
 
-function lockedFor(ip: string): number {
+async function lockedFor(ip: string): Promise<number> {
   const now = Date.now();
+  const rows = await db
+    .select()
+    .from(schema.securityCounters)
+    .where(inArray(schema.securityCounters.key, LIMITS.map((l) => l.key(ip))));
   let wait = 0;
   for (const l of LIMITS) {
-    const w = failures.get(l.key(ip));
-    if (w && now - w.start < l.windowMs && w.count >= l.max) wait = Math.max(wait, w.start + l.windowMs - now);
+    const w = rows.find((r) => r.key === l.key(ip));
+    if (w && now - w.windowStart.getTime() < l.windowMs && w.count >= l.max) wait = Math.max(wait, w.windowStart.getTime() + l.windowMs - now);
   }
   return wait;
 }
 
-function recordFailure(ip: string) {
-  const now = Date.now();
+async function recordFailure(ip: string) {
   for (const l of LIMITS) {
-    const k = l.key(ip);
-    const w = failures.get(k);
-    if (!w || now - w.start >= l.windowMs) failures.set(k, { start: now, count: 1 });
-    else w.count += 1;
+    const windowStartsAfter = new Date(Date.now() - l.windowMs);
+    // Start a new window when the old one has passed, otherwise count within it.
+    await db
+      .insert(schema.securityCounters)
+      .values({ key: l.key(ip), windowStart: new Date(), count: 1 })
+      .onConflictDoUpdate({
+        target: schema.securityCounters.key,
+        set: {
+          count: sql`case when ${schema.securityCounters.windowStart} < ${windowStartsAfter} then 1 else ${schema.securityCounters.count} + 1 end`,
+          windowStart: sql`case when ${schema.securityCounters.windowStart} < ${windowStartsAfter} then now() else ${schema.securityCounters.windowStart} end`,
+        },
+      });
   }
 }
 
 /** Throws unless `code` is the admin code. Wrong guesses are rate limited. */
-export function checkAdminCode(code: unknown, ip: string) {
-  const wait = lockedFor(ip);
+export async function checkAdminCode(code: unknown, ip: string) {
+  const wait = await lockedFor(ip);
   if (wait > 0) {
     const minutes = Math.ceil(wait / 60_000);
     throw new ApiError(429, 'admin_code_locked', `Too many wrong admin codes. Try again in ${minutes} minute${minutes === 1 ? '' : 's'}.`, { retryable: true, retryAfterSeconds: Math.ceil(wait / 1000) });
@@ -96,7 +108,7 @@ export function checkAdminCode(code: unknown, ip: string) {
   const given = Buffer.from(String(code ?? '').trim());
   const expected = Buffer.from(ADMIN_SIGNUP_CODE);
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-    recordFailure(ip);
+    await recordFailure(ip);
     log.warn('admin_code.rejected', {});
     throw new ApiError(403, 'bad_admin_code', 'That admin code isn’t right.', { fields: { adminCode: 'That admin code isn’t right.' } });
   }

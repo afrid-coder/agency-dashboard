@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router';
 import { AuthLayout } from './AuthLayout.tsx';
 import { PasswordField } from './PasswordField.tsx';
 import { Button, Field, Notice } from '../../components/ui.tsx';
-import { authClient, authError } from '../../lib/auth.ts';
+import { appHref, authClient, authError } from '../../lib/auth.ts';
 import { emailSchema, passwordProblem } from '../../../shared/schemas.ts';
 import { useDevOutbox } from './DevOutboxPage.tsx';
 
@@ -21,7 +21,7 @@ export function ForgotPasswordPage() {
     if (!parsed.success) return setError(parsed.error.issues[0].message);
     setError(null);
     setBusy(true);
-    const { error: err } = await authClient.requestPasswordReset({ email: parsed.data, redirectTo: '/reset-password' });
+    const { error: err } = await authClient.requestPasswordReset({ email: parsed.data, redirectTo: appHref('/reset-password') });
     setBusy(false);
     if (err && err.status === 429) return setError(authError(err));
     // Same message whether or not an account exists, so addresses can't be probed.

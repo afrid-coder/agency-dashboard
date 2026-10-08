@@ -168,6 +168,26 @@ Owners and admins can also export the core business records at any time from **S
 
 ## Deploying
 
+### GitHub Pages + Supabase (how this repository is published)
+
+The web app is a static build on **GitHub Pages**. The API (`server/app.ts`, the same code the Node server runs) is a **Supabase Edge Function** named `api`, and the data lives in the Supabase project's Postgres. `.github/workflows/deploy.yml` tests every push to `main`, then publishes both.
+
+- **Sessions:** the web app and API are on different sites, so sessions are bearer tokens in the `Authorization` header instead of cookies. CORS allows only the Pages origin.
+- **Live updates:** Supabase Realtime broadcast channels (`lumera:org:<id>`, `lumera:user:<id>`). Messages carry only "what changed", never record content; the app refetches with its token. If the channel is unavailable, the app refreshes every 30 seconds.
+- **Database:** migrations run from `server/db/migrations.generated.ts` when the function starts (`npm run db:generate` keeps it in sync). Migration `0003_supabase_lockdown` enables row-level security and revokes the Data API roles on every table, so the publishable key can't read or change app data. Only the function, connecting as the table owner, can.
+- **Reminders:** there's no background process, so reminder checks run at most once a minute when someone opens the app.
+
+One-time setup:
+
+1. **GitHub:** in the repository, open **Actions** and enable workflows (forks start with them off). Then go to **Settings → Pages → Source** and choose **GitHub Actions**.
+2. **Supabase access for deploys:** in Supabase, go to **Account → Access Tokens** and generate a token. In GitHub, go to **Settings → Secrets and variables → Actions** and add it as `SUPABASE_ACCESS_TOKEN`.
+3. **Admin code:** in Supabase, go to **Edge Functions → Secrets** and add `ADMIN_SIGNUP_CODE` with your own four digits. Optionally add `ANTHROPIC_API_KEY` for Lume and `RESEND_API_KEY` + `MAIL_FROM` for email. The workflow sets `APP_URL` and a generated `BETTER_AUTH_SECRET` itself.
+4. Push to `main`, or run the **Deploy** workflow by hand. The site appears at `https://<owner>.github.io/<repository>/`.
+
+The project ref and publishable key in the workflow are public by design. Secrets live only in GitHub and Supabase.
+
+### Other hosts
+
 **Docker:** `docker build -t lumera . && docker run -p 8787:8787 --env-file .env lumera`
 
 **Render:** push the repository and create a *Blueprint* from `render.yaml`. It sets up the web service, PostgreSQL, a generated auth secret and the health check. When asked, enter your own `ADMIN_SIGNUP_CODE` (required). `ANTHROPIC_API_KEY`, `MAIL_FROM` and `RESEND_API_KEY` are optional and can be added later. The app uses its `onrender.com` address automatically; set `APP_URL` only if you add a custom domain.

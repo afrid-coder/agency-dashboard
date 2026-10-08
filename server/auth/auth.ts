@@ -8,8 +8,9 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { APIError, createAuthMiddleware } from 'better-auth/api';
+import { bearer } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
-import { APP_ORIGIN, APP_URL, AUTH_SECRET, COOKIE_SECURE } from '../env.ts';
+import { API_URL, APP_ORIGIN, AUTH_SECRET, COOKIE_SECURE } from '../env.ts';
 
 /** Set by server/index.ts from the socket (or trusted proxy); never taken from the client. */
 export const CLIENT_IP_HEADER = 'x-lumera-client-ip';
@@ -29,10 +30,14 @@ function asAuthError(err: unknown): never {
 
 export const auth = betterAuth({
   appName: 'Lumera Creative',
-  baseURL: APP_URL,
+  baseURL: API_URL,
   basePath: '/api/auth',
   secret: AUTH_SECRET,
   trustedOrigins: [APP_ORIGIN],
+  // Sessions are cookies when the web app and API share an origin, and
+  // bearer tokens (Authorization header) when the web app is hosted
+  // separately, e.g. GitHub Pages calling the API on Supabase.
+  plugins: [bearer()],
   database: drizzleAdapter(db, {
     provider: 'pg',
     schema: { user: schema.user, session: schema.session, account: schema.account, verification: schema.verification, rateLimit: schema.rateLimit },
@@ -101,7 +106,7 @@ export const auth = betterAuth({
         // Checked before the account exists, so a wrong code creates nothing.
         if (body.admin === true) {
           try {
-            checkAdminCode(body.adminCode, ctx.headers?.get(CLIENT_IP_HEADER) ?? 'unknown');
+            await checkAdminCode(body.adminCode, ctx.headers?.get(CLIENT_IP_HEADER) ?? 'unknown');
           } catch (err) {
             asAuthError(err);
           }

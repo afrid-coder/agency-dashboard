@@ -1,0 +1,6 @@
+# Supabase CLI settings for deploying the API (see .github/workflows/deploy.yml).
+project_id = "lumera"
+
+[functions.api]
+# The API checks its own sessions (bearer tokens); the web app has no Supabase login.
+verify_jwt = false

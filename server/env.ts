@@ -1,29 +1,39 @@
 // Server configuration. Every secret is read from the environment on the
 // server only; nothing here is ever sent to the browser.
+//
+// The same server runs two ways:
+// - Node (development, Docker): serves the API and, in production, the web app.
+// - Supabase Edge Function (IS_EDGE): the API only; the web app is hosted
+//   separately (GitHub Pages) and calls it across origins with bearer tokens.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import path from 'node:path';
 
-export const ROOT = path.resolve(import.meta.dirname, '..');
-export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(ROOT, 'data'));
-mkdirSync(DATA_DIR, { recursive: true });
+export const IS_EDGE = typeof (globalThis as { EdgeRuntime?: unknown }).EdgeRuntime !== 'undefined';
 
-export const isProd = process.env.NODE_ENV === 'production';
+export const ROOT = path.resolve(import.meta.dirname ?? '.', '..');
+export const DATA_DIR = path.resolve(process.env.DATA_DIR ?? path.join(ROOT, 'data'));
+if (!IS_EDGE) mkdirSync(DATA_DIR, { recursive: true });
+
+export const isProd = process.env.NODE_ENV === 'production' || IS_EDGE;
 export const PORT = Number(process.env.PORT ?? 8787);
-// The public address. On Render it defaults to the service's own onrender.com URL;
-// set APP_URL only for a custom domain.
+// The public address of the web app. On Render it defaults to the service's
+// own onrender.com URL; set APP_URL for a custom domain or a separately
+// hosted web app (e.g. GitHub Pages).
 export const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || (isProd ? `http://localhost:${PORT}` : 'http://localhost:5173')).replace(/\/$/, '');
 export const APP_ORIGIN = new URL(APP_URL).origin;
+/** Where this API is reached. On Supabase: https://<ref>.supabase.co/functions/v1 (routes live under /api). */
+export const API_URL = (process.env.API_URL || (IS_EDGE && process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL}/functions/v1` : APP_URL)).replace(/\/$/, '');
 export const COOKIE_SECURE = APP_URL.startsWith('https://');
-export const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+export const TRUST_PROXY = process.env.TRUST_PROXY === '1' || IS_EDGE;
 
 const problems: string[] = [];
 
 // ─── Database ────────────────────────────────────────────────────────────
 // Production uses PostgreSQL via DATABASE_URL. Local development without it
 // runs an embedded PostgreSQL (PGlite) stored in data/pg.
-export const DATABASE_URL = process.env.DATABASE_URL ?? '';
-export const DATABASE_SSL = process.env.DATABASE_SSL ?? (DATABASE_URL && !/localhost|127\.0\.0\.1/.test(DATABASE_URL) ? 'require' : 'disable');
+export const DATABASE_URL = process.env.DATABASE_URL || (IS_EDGE ? (process.env.SUPABASE_DB_URL ?? '') : '');
+export const DATABASE_SSL = process.env.DATABASE_SSL ?? (IS_EDGE ? 'no-verify' : DATABASE_URL && !/localhost|127\.0\.0\.1/.test(DATABASE_URL) ? 'require' : 'disable');
 export const EMBEDDED_DB_DIR = path.join(DATA_DIR, 'pg');
 if (isProd && !DATABASE_URL) problems.push('DATABASE_URL is required in production (a PostgreSQL connection string).');
 
@@ -93,7 +103,28 @@ if (!/^\d{4}$/.test(ADMIN_SIGNUP_CODE)) problems.push('ADMIN_SIGNUP_CODE must be
 else if (isProd && ADMIN_SIGNUP_CODE === BUILT_IN_ADMIN_CODE)
   problems.push('Set ADMIN_SIGNUP_CODE to your own four digits. The built-in code is public in the source and only works in development.');
 
+// ─── Live updates on Supabase ────────────────────────────────────────────
+// On Supabase, changes are announced through Realtime broadcast instead of
+// the in-process event stream. Messages carry only "what changed" topics.
+function realtimeKey(): string {
+  const direct = process.env.REALTIME_API_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+  if (direct) return direct;
+  for (const name of ['SUPABASE_SECRET_KEYS', 'SUPABASE_PUBLISHABLE_KEYS']) {
+    try {
+      const first = Object.values(JSON.parse(process.env[name] ?? '{}') as Record<string, string>)[0];
+      if (first) return first;
+    } catch {
+      /* not set or not JSON */
+    }
+  }
+  return process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+}
+export const realtimeBroadcast = IS_EDGE && process.env.SUPABASE_URL ? { url: process.env.SUPABASE_URL, key: realtimeKey() } : null;
+
 if (problems.length) {
-  console.error('\nLumera Creative cannot start:\n' + problems.map((p) => `  • ${p}`).join('\n') + '\n\nSee .env.example and README.md.\n');
+  const message = 'Lumera Creative cannot start:\n' + problems.map((p) => `  • ${p}`).join('\n');
+  // An edge function can't exit; failing the import surfaces the reason in its logs.
+  if (IS_EDGE) throw new Error(message);
+  console.error(`\n${message}\n\nSee .env.example and README.md.\n`);
   process.exit(1);
 }

@@ -2,6 +2,7 @@
 // already opened with email + password; it can never sign anyone in.
 // Hashed with scrypt and peppered with a key derived from the server secret,
 // so a copied database alone is not enough to brute-force PINs offline.
+import { Buffer } from 'node:buffer';
 import { createHmac, randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { AUTH_SECRET } from '../env.ts';

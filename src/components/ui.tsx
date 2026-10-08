@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type Rea
 import { Icon, type IconName } from '../lib/icons.tsx';
 import { gsap, skipMotion } from '../lib/motion.ts';
 import { initials, toneFor } from '../lib/format.ts';
+import { apiAsset } from '../lib/api.ts';
 import type { Member } from '../../shared/types.ts';
 
 // ---------- Button ----------
@@ -225,7 +226,7 @@ export function Avatar({ member, size = 28, ring }: { member: Pick<Member, 'id' 
   const style = { width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.38)) };
   return (
     <span className={`avatar tone-${toneFor(member.id)} ${ring ? 'avatar-ring' : ''}`} style={style} title={member.name}>
-      {member.avatarUrl && !failed ? <img src={member.avatarUrl} alt="" onError={() => setFailed(true)} /> : <span aria-hidden="true">{initials(member.name)}</span>}
+      {member.avatarUrl && !failed ? <img src={apiAsset(member.avatarUrl)!} alt="" onError={() => setFailed(true)} /> : <span aria-hidden="true">{initials(member.name)}</span>}
       <span className="sr-only">{member.name}</span>
     </span>
   );

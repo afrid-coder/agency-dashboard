@@ -6,7 +6,7 @@ import { Button, EmptyState, Field, Menu, Notice } from '../../components/ui.tsx
 import { ConfirmDialog } from '../../components/extras.tsx';
 import { useToast } from '../../components/Toast.tsx';
 import { Icon } from '../../lib/icons.tsx';
-import { api, errorMessage } from '../../lib/api.ts';
+import { api, downloadFile, errorMessage } from '../../lib/api.ts';
 import { invalidateProfit, useMembers, useProfit } from '../../lib/queries.ts';
 import { useUI } from '../shell/ui.tsx';
 import { can, tzOf, useMeData } from '../shell/me.tsx';
@@ -66,9 +66,9 @@ export function ProfitPage() {
             </Button>
           )}
           {can(me, 'data.export') && (
-            <a className="btn btn-ghost btn-md" href="/api/export/profit.csv" download>
-              <Icon name="download" size={17} /> <span className="btn-label">Export CSV</span>
-            </a>
+            <Button variant="ghost" icon="download" onClick={() => void downloadFile('/api/export/profit.csv', 'lumera-profit.csv').catch((err) => toast({ tone: 'error', message: errorMessage(err) }))}>
+              Export CSV
+            </Button>
           )}
         </div>
       </header>

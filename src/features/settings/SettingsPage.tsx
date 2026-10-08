@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/extras.tsx';
 import { PinInput } from '../../components/PinInput.tsx';
 import { useToast } from '../../components/Toast.tsx';
 import { Icon, type IconName } from '../../lib/icons.tsx';
-import { api, ApiRequestError, errorMessage } from '../../lib/api.ts';
+import { api, ApiRequestError, downloadFile, errorMessage } from '../../lib/api.ts';
 import { authClient, authError } from '../../lib/auth.ts';
 import { keys, useInvitations, useMembers } from '../../lib/queries.ts';
 import { applyTheme, readTheme, type ThemePref } from '../../lib/theme.ts';
@@ -528,18 +528,30 @@ function LumeSettings() {
 }
 
 function ExportSection() {
+  const toast = useToast();
+  const [busy, setBusy] = useState<string | null>(null);
+  const download = async (path: string, name: string) => {
+    setBusy(path);
+    try {
+      await downloadFile(path, name);
+    } catch (err) {
+      toast({ tone: 'error', message: errorMessage(err) });
+    } finally {
+      setBusy(null);
+    }
+  };
   return (
     <Section title="Export" description="Download the workspace’s core business records. Exports are logged in the activity history.">
       <div className="row-gap wrap">
-        <a className="btn btn-secondary btn-md" href="/api/export/workspace.json" download>
-          <Icon name="download" size={17} /> <span className="btn-label">Everything (JSON)</span>
-        </a>
-        <a className="btn btn-secondary btn-md" href="/api/export/tasks.csv" download>
-          <Icon name="download" size={17} /> <span className="btn-label">Tasks (CSV)</span>
-        </a>
-        <a className="btn btn-secondary btn-md" href="/api/export/profit.csv" download>
-          <Icon name="download" size={17} /> <span className="btn-label">Profit (CSV)</span>
-        </a>
+        <Button variant="secondary" icon="download" loading={busy === '/api/export/workspace.json'} onClick={() => void download('/api/export/workspace.json', 'lumera-export.json')}>
+          Everything (JSON)
+        </Button>
+        <Button variant="secondary" icon="download" loading={busy === '/api/export/tasks.csv'} onClick={() => void download('/api/export/tasks.csv', 'lumera-tasks.csv')}>
+          Tasks (CSV)
+        </Button>
+        <Button variant="secondary" icon="download" loading={busy === '/api/export/profit.csv'} onClick={() => void download('/api/export/profit.csv', 'lumera-profit.csv')}>
+          Profit (CSV)
+        </Button>
       </div>
     </Section>
   );

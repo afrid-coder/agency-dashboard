@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router';
 import { AuthLayout } from './AuthLayout.tsx';
 import { Button, Notice } from '../../components/ui.tsx';
 import { Icon } from '../../lib/icons.tsx';
-import { authClient, authError } from '../../lib/auth.ts';
+import { appHref, authClient, authError } from '../../lib/auth.ts';
 import { useDevOutbox } from './DevOutboxPage.tsx';
 
 export function CheckEmailPage() {
@@ -23,7 +23,7 @@ export function CheckEmailPage() {
   const resend = async () => {
     if (!email) return;
     setStatus('sending');
-    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: '/onboarding' });
+    const { error } = await authClient.sendVerificationEmail({ email, callbackURL: appHref('/onboarding') });
     if (error) {
       setStatus('error');
       setMessage(authError(error));

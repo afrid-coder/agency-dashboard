@@ -1,7 +1,10 @@
 // Background jobs: event reminders, due-today notices and housekeeping.
-// Runs every minute in the server process; notifications are deduplicated,
-// so a restart or a second instance never sends the same reminder twice.
-import { and, eq, isNull, lt, ne } from 'drizzle-orm';
+// Node runs them every minute in the server process. On Supabase there is no
+// background process, so they run off ordinary traffic (runRemindersIfDue).
+// Notifications are deduplicated, so overlapping runs never send the same
+// reminder twice.
+import { and, eq, isNull, lt, ne, sql } from 'drizzle-orm';
+import { waitUntil } from '../runtime.ts';
 import { db, schema } from '../db/client.ts';
 import { listOccurrences, eventHref } from './events.ts';
 import { notify } from './notifications.ts';
@@ -70,6 +73,20 @@ export async function runReminders(now = new Date()) {
   } finally {
     running = false;
   }
+}
+
+/** Runs the jobs at most once a minute across all instances, after the current response. */
+export function runRemindersIfDue() {
+  const C = schema.securityCounters;
+  const job = (async () => {
+    const claimed = await db
+      .insert(C)
+      .values({ key: 'job:reminders', windowStart: new Date(), count: 1 })
+      .onConflictDoUpdate({ target: C.key, set: { windowStart: sql`now()`, count: sql`${C.count} + 1` }, setWhere: sql`${C.windowStart} < now() - interval '60 seconds'` })
+      .returning({ key: C.key });
+    if (claimed.length) await runReminders();
+  })().catch((err) => log.warn('reminders.failed', { message: String(err).slice(0, 200) }));
+  waitUntil(job);
 }
 
 export function startScheduler() {

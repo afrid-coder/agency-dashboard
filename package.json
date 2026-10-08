@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.json && vite build",
     "start": "NODE_ENV=production node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/index.ts",
     "typecheck": "tsc -p tsconfig.json",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && node scripts/embed-migrations.mjs",
     "db:migrate": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/scripts/migrate.ts",
     "seed:demo": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/scripts/seed-demo.ts",
     "backup": "./scripts/backup.sh",

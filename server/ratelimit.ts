@@ -32,7 +32,9 @@ export const writeLimit: MiddlewareHandler = async (c, next) => {
   await next();
 };
 
-setInterval(() => {
+const sweep = setInterval(() => {
   const now = Date.now();
   for (const [k, w] of windows) if (now - w.start > 3_600_000) windows.delete(k);
-}, 600_000).unref();
+}, 600_000);
+// Node: don't keep the process alive for this. (Deno timers are numbers.)
+(sweep as unknown as { unref?: () => void }).unref?.();

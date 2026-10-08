@@ -7,7 +7,7 @@ import { Button, IconButton, Notice, Spinner } from '../../components/ui.tsx';
 import { ConfirmDialog } from '../../components/extras.tsx';
 import { useToast } from '../../components/Toast.tsx';
 import { Icon, LumeMark } from '../../lib/icons.tsx';
-import { CLIENT_HEADERS, api, errorMessage } from '../../lib/api.ts';
+import { api, apiUrl, authHeaders, CLIENT_HEADERS, CROSS_ORIGIN_API, errorMessage } from '../../lib/api.ts';
 import { invalidateEvents, invalidateWork, keys, useLumeConversation, useLumeConversations } from '../../lib/queries.ts';
 import { panelIn, panelOut } from '../../lib/motion.ts';
 import { relativeTime } from '../../lib/format.ts';
@@ -145,10 +145,10 @@ export function LumePanel() {
       } else setMessages((m) => m.filter((x) => x.id !== retryOf));
       setStreaming({ id: 'pending', text: '', status: 'Thinking', refs: [], actionIds: [] });
       try {
-        const res = await fetch('/api/lume/chat', {
+        const res = await fetch(apiUrl('/api/lume/chat'), {
           method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', ...CLIENT_HEADERS },
+          credentials: CROSS_ORIGIN_API ? 'omit' : 'same-origin',
+          headers: { 'Content-Type': 'application/json', ...CLIENT_HEADERS, ...authHeaders() },
           body: JSON.stringify({ conversationId, message: message || 'retry', page, timezone: tzOf(me), retryOf }),
           signal: controller.signal,
         });

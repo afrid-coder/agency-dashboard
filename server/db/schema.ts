@@ -672,6 +672,13 @@ export const activity = pgTable(
   (t) => [index('activity_org_idx').on(t.orgId, t.createdAt)],
 );
 
+/** Fixed-window counters for security limits that must hold across server instances (e.g. wrong admin codes). */
+export const securityCounters = pgTable('security_counters', {
+  key: text('key').primaryKey(),
+  windowStart: ts('window_start').notNull(),
+  count: integer('count').notNull().default(0),
+});
+
 /** Development only: captured email when no provider is configured. */
 export const devOutbox = pgTable('dev_outbox', {
   id: uuid('id').primaryKey().defaultRandom(),

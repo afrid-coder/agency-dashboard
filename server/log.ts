@@ -1,6 +1,9 @@
 // Structured logging that never writes secrets. Keys that look sensitive are
 // redacted, and request logs contain paths without query strings.
-import { isProd } from './env.ts';
+import { IS_EDGE, isProd } from './env.ts';
+
+// Edge Functions collect console output; Node writes straight to stdout.
+const emit = (line: string) => (IS_EDGE ? console.log(line) : process.stdout.write(line + '\n'));
 
 const SENSITIVE = /pass|pin|token|secret|authorization|cookie|api[-_]?key|code|email/i;
 
@@ -19,11 +22,11 @@ function write(level: 'debug' | 'info' | 'warn' | 'error', event: string, data?:
   if (level === 'debug' && isProd) return;
   const payload = data ? (redact(data) as Record<string, unknown>) : undefined;
   if (isProd) {
-    process.stdout.write(JSON.stringify({ t: new Date().toISOString(), level, event, ...payload }) + '\n');
+    emit(JSON.stringify({ t: new Date().toISOString(), level, event, ...payload }));
   } else {
     const color = { debug: 90, info: 36, warn: 33, error: 31 }[level];
     const extra = payload ? ' ' + Object.entries(payload).map(([k, v]) => `${k}=${typeof v === 'string' ? v : JSON.stringify(v)}`).join(' ') : '';
-    process.stdout.write(`\x1b[${color}m${level.padEnd(5)}\x1b[0m ${event}${extra}\n`);
+    emit(`\x1b[${color}m${level.padEnd(5)}\x1b[0m ${event}${extra}`);
   }
 }
 

@@ -1,0 +1,15 @@
+{
+  "imports": {
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@0.129.0",
+    "@anthropic-ai/sdk/": "npm:/@anthropic-ai/sdk@0.129.0/",
+    "better-auth": "npm:better-auth@1.7.6",
+    "better-auth/": "npm:/better-auth@1.7.6/",
+    "drizzle-orm": "npm:drizzle-orm@0.45.3",
+    "drizzle-orm/": "npm:/drizzle-orm@0.45.3/",
+    "hono": "npm:hono@4.13.9",
+    "hono/": "npm:/hono@4.13.9/",
+    "nodemailer": "npm:nodemailer@10.0.10",
+    "pg": "npm:pg@8.23.0",
+    "zod": "npm:zod@4.6.5"
+  }
+}

@@ -1,6 +1,5 @@
 // Outgoing email: Resend or SMTP in production. In development without a
 // provider, messages are captured in the local outbox at /dev/outbox.
-import nodemailer from 'nodemailer';
 import { mail, mailMode } from '../env.ts';
 import { db, schema } from '../db/client.ts';
 import { log } from '../log.ts';
@@ -15,7 +14,9 @@ export interface MailMessage {
   footnote: string;
 }
 
-const transport = mailMode === 'smtp' ? nodemailer.createTransport(mail.smtpUrl) : null;
+// Loaded only when SMTP is configured (Supabase blocks SMTP ports; use Resend there).
+let smtp: Promise<import('nodemailer').Transporter> | null = null;
+const smtpTransport = () => (smtp ??= import('nodemailer').then((m) => m.default.createTransport(mail.smtpUrl)));
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
 
@@ -49,8 +50,8 @@ export async function sendMail(m: MailMessage): Promise<void> {
     }
     return;
   }
-  if (transport) {
-    await transport.sendMail({ from: mail.from, to: m.to, subject: m.subject, text: renderText(m), html: renderHtml(m) });
+  if (mailMode === 'smtp') {
+    await (await smtpTransport()).sendMail({ from: mail.from, to: m.to, subject: m.subject, text: renderText(m), html: renderHtml(m) });
     return;
   }
   await db.insert(schema.devOutbox).values({ toAddress: m.to, subject: m.subject, text: renderText(m), link: m.link });

@@ -8,3 +8,8 @@ backups/
 .DS_Store
 .old/
 .claude/settings.local.json
+
+# Supabase function build output (scripts/prepare-edge.mjs)
+supabase/functions/api/server/
+supabase/functions/api/shared/
+supabase/.temp/

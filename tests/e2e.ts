@@ -440,6 +440,22 @@ async function main() {
   r = await new Browser().post('/api/auth/sign-in/email', { email: 'maya@lumera.test', password: 'amber-forest-kite-58' });
   check('sign in with the new password', r.status === 200, r.data);
 
+  // ── Bearer sessions: the web app on another origin (GitHub Pages → Supabase) ──
+  section('Bearer sessions');
+  const signInRes = await fetch(`${BASE}/api/auth/sign-in/email`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Origin: BASE, 'X-Forwarded-For': '203.0.113.250' },
+    body: JSON.stringify({ email: 'avery@lumera.test', password: 'tidal-harbor-lantern-42' }),
+  });
+  const bearerToken = signInRes.headers.get('set-auth-token');
+  check('sign-in returns a bearer token', signInRes.status === 200 && Boolean(bearerToken), signInRes.status);
+  const viaBearer = await fetch(`${BASE}/api/me`, { headers: { Authorization: `Bearer ${bearerToken}` } });
+  check('the token alone opens the session (no cookie)', viaBearer.status === 200 && (await viaBearer.json()).user.email === 'avery@lumera.test');
+  const bearerWrite = await fetch(`${BASE}/api/notes`, { method: 'POST', headers: { Authorization: `Bearer ${bearerToken}`, 'Content-Type': 'application/json', Origin: BASE, 'X-Lumera-Client': '1' }, body: JSON.stringify({ title: 'Via token', body: 'ok' }) });
+  check('writes work with the token', bearerWrite.status === 201, bearerWrite.status);
+  const forged = await fetch(`${BASE}/api/me`, { headers: { Authorization: 'Bearer forged.token' } });
+  check('a forged token is refused', forged.status === 401, forged.status);
+
   // ── Time zones, DST, recurrence, failures ──
   section('Time zones, recurrence and failures');
   r = await owner.get(`/api/events?from=2026-10-20&to=2026-11-20&tz=America/New_York`);

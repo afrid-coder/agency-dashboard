@@ -66,7 +66,7 @@ function Shell() {
     (n: LiveNotification) => toast({ tone: 'info', message: n.title, action: n.link ? { label: 'Open', onClick: () => navigate(n.link!) } : undefined }),
     [toast, navigate],
   );
-  const live = useLiveUpdates(true, onNotification);
+  const live = useLiveUpdates({ orgId: me.workspace!.id, userId: me.user.id }, onNotification);
   useIdleLock(me);
 
   // Move focus to the page on navigation so keyboard and screen-reader users start at the content.

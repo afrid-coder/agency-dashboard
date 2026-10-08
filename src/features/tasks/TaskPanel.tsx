@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Dialog } from '../../components/Dialog.tsx';
 import { Avatar, Button, Checkbox, EmptyState, Field, IconButton, Menu, Notice, Segmented, Skeleton } from '../../components/ui.tsx';
 import { ConfirmDialog, MemberPicker, SaveState, type SaveStatus } from '../../components/extras.tsx';
+import { appHref } from '../../lib/auth.ts';
 import { AddedBy } from '../../components/AddedBy.tsx';
 import { useToast } from '../../components/Toast.tsx';
 import { Icon } from '../../lib/icons.tsx';
@@ -74,7 +75,7 @@ function TaskMenu({ task }: { task: TaskDetail }) {
           {
             label: 'Copy link',
             icon: 'link',
-            onSelect: () => void navigator.clipboard?.writeText(`${window.location.origin}/app/tasks?task=${task.id}`),
+            onSelect: () => void navigator.clipboard?.writeText(appHref(`/app/tasks?task=${task.id}`)),
           },
           { label: 'Delete task', icon: 'trash', danger: true, disabled: !canDelete, onSelect: () => setConfirm(true) },
         ]}

@@ -1,7 +1,31 @@
 // Better Auth browser client: sign-up, sign-in, password reset, sessions.
+// Same origin: the session is an httpOnly cookie. Cross-origin (GitHub Pages
+// → Supabase): the session is a bearer token kept by lib/api.ts.
 import { createAuthClient } from 'better-auth/client';
+import { API_BASE, CROSS_ORIGIN_API, sessionToken } from './api.ts';
 
-export const authClient = createAuthClient({ baseURL: window.location.origin, basePath: '/api/auth' });
+export const authClient = createAuthClient({
+  baseURL: API_BASE || window.location.origin,
+  basePath: '/api/auth',
+  fetchOptions: CROSS_ORIGIN_API
+    ? {
+        // No cookies cross-site: the bearer token is the session.
+        credentials: 'omit',
+        auth: { type: 'Bearer', token: () => sessionToken.get() ?? undefined },
+        onSuccess: (ctx) => {
+          const token = ctx.response.headers.get('set-auth-token');
+          if (token) sessionToken.set(token);
+          if (String(ctx.request.url).includes('/sign-out')) sessionToken.clear();
+        },
+      }
+    : undefined,
+});
+
+/** A network failure (server unreachable) as an auth error, so forms can show it. */
+export const unreachable = () => ({ data: null, error: { code: 'NETWORK', status: 0, message: 'Couldn’t reach the Lumera server. Check your connection and try again.' } as { code?: string; status: number; message: string } });
+
+/** Absolute address of a page in this app, for links that leave it (emails, copied links). */
+export const appHref = (path: string) => new URL(path.replace(/^\//, ''), window.location.origin + import.meta.env.BASE_URL).href;
 
 const FRIENDLY: Record<string, string> = {
   INVALID_EMAIL_OR_PASSWORD: 'That email and password don’t match an account. Check them and try again.',

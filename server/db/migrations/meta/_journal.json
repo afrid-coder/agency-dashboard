@@ -15,6 +15,20 @@
       "when": 1790729437608,
       "tag": "0001_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791500793704,
+      "tag": "0002_security_counters",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791500794061,
+      "tag": "0003_supabase_lockdown",
+      "breakpoints": true
     }
   ]
 }
