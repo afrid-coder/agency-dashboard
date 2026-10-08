@@ -82,11 +82,18 @@ app.use('/api/*', csrfGuard);
 // The client address is passed to Better Auth's rate limiter in a header we
 // set ourselves (any incoming copy is discarded): the socket address, or the
 // proxy-supplied X-Forwarded-For when TRUST_PROXY=1.
-app.on(['GET', 'POST'], '/api/auth/*', (c) => {
+//
+// Better Auth routes by its public address (API_URL + /api/auth/…). Supabase
+// removes the /functions/v1 part of that address before the request reaches
+// this code, so the request is presented at its public address again.
+app.on(['GET', 'POST'], '/api/auth/*', async (c) => {
   const headers = new Headers(c.req.raw.headers);
   headers.delete(CLIENT_IP_HEADER);
   headers.set(CLIENT_IP_HEADER, clientIp(c));
-  return auth.handler(new Request(c.req.raw, { headers }));
+  const url = new URL(c.req.url);
+  const publicUrl = `${API_URL}${url.pathname}${url.search}`;
+  const body = c.req.method === 'GET' ? undefined : await c.req.raw.arrayBuffer();
+  return auth.handler(new Request(publicUrl, { method: c.req.method, headers, body }));
 });
 
 app.route('/api', publicRoutes);

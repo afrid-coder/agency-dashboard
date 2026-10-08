@@ -18,6 +18,7 @@
     "seed:demo": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/scripts/seed-demo.ts",
     "backup": "./scripts/backup.sh",
     "test:e2e": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning tests/e2e.ts",
+    "test:edge": "node --disable-warning=ExperimentalWarning tests/edge-paths.ts",
     "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {

@@ -30,7 +30,10 @@ function asAuthError(err: unknown): never {
 
 export const auth = betterAuth({
   appName: 'Lumera Creative',
-  baseURL: API_URL,
+  // The full public address of the auth routes. When the base address has a
+  // path (Supabase: …/functions/v1), Better Auth ignores basePath, so the
+  // /api/auth part is spelled out here.
+  baseURL: `${API_URL}/api/auth`,
   basePath: '/api/auth',
   secret: AUTH_SECRET,
   trustedOrigins: [APP_ORIGIN],
